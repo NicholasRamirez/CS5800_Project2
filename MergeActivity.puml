@@ -1,0 +1,56 @@
+@startuml
+'https://plantuml.com/activity-diagram-beta
+
+title Merge Dating App Activity Diagram - Login/Signup -> Profile Setup -> Discover -> Match -> Chat
+
+start
+:Provide credentials;
+:AuthenticationServices.validateCredentials();
+
+if (Existing user & valid?) then (yes)
+    :AuthenticationServices.startSession(userId);
+else (no)
+    :AuthenticationServices.sendVerificationToken(email);
+    :Visitor clicks verification link;
+    :VerificationToken.validate();
+    if (Token valid?) then (yes)
+        :AuthenticationServices.createUser(email, passwordHash);
+        :AuthenticationServices.startSession(userId);
+    else (no)
+        stop
+    endif
+endif
+
+if (Has ProfileInformation?) then (yes)
+    :ProfileService.validateBeforeDiscoverable(userId);
+else (no)
+    :ProfileService.validateProfile(profileInfo);
+    :ProfileService.createProfileInformation(userId, profileInfo);
+    :ProfileService.updatePrompts(userId, prompts);
+    :ProfileService.updatePhotos(userId, photos);
+    :ProfileService.updateInterests(userId, interests);
+    :ProfileService.validateBeforeDiscoverable(userId);
+endif
+
+while (More candidates?) is (yes)
+    :DiscoveryService.getNextCandidate(userId);
+    :Show candidate card;
+    if (Pass?) then (yes)
+        :DiscoveryService.recordPass(userId, candidateId);
+    else (no)
+        :MatchingService.recordLike(likerId=userId, likedId=candidateId);
+        if (isMutualLike?) then (yes)
+            :MatchingService.createMatch(userId, candidateId);
+            :MatchingService.openChat(matchId);
+            :NotificationService.notifyNewMatch(userId, matchId);
+            :NotificationService.notifyNewMatch(candidateId, matchId);
+            :MessagingService.sendMessage(threadId, userId, "Hello!");
+        else (no)
+            :Continue browsing;
+        endif
+        :Return to discovery loop;
+    endif
+endwhile (no)
+
+stop
+@enduml

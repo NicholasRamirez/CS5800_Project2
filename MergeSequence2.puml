@@ -1,0 +1,54 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title Merge Dating App Sequence Diagram - Login/Signup -> Verification -> Profile Setup
+
+actor "Visitor" as visitor
+participant "App" as app
+participant "AuthenticationServices" as authenticationServices
+participant "VerificationToken" as verificationToken
+participant "ProfileService" as profileService
+
+visitor -> app: Enter email and password
+app -> authenticationServices: validateCredentials(email, password)
+
+alt Existing user and valid
+    authenticationServices --> app: ok
+    app -> authenticationServices: startSession(userId)
+    authenticationServices --> app: sessionId
+else New user or invalid
+    app -> authenticationServices: sendVerificationToken(email)
+    authenticationServices --> app: tokenSent
+    visitor -> app: Click verification link
+    app -> verificationToken: validate()
+    alt Token valid
+        verificationToken --> app: ok
+        app -> authenticationServices: createUser(email, passwordHash)
+        authenticationServices --> app: userId
+        app -> authenticationServices: startSession(userId)
+        authenticationServices --> app: sessionId
+    else Token invalid
+        verificationToken --> app: invalid
+        app -> visitor: Show error and retry
+    end
+end
+
+' Profile Complete
+app -> profileService: validateBeforeDiscoverable(userId)
+alt Profile complete
+    profileService --> app: true
+    app -> visitor: Proceed to Discover feed
+else Needs setup
+    loop Fill required fields until valid
+        visitor -> app: Provide profileInfo/prompts/photos/interests
+        app -> profileService: validateProfile(profileId)
+        profileService --> app: validationResult(ok/errors)
+    end
+    app -> profileService: createProfileInformation(userId, profileInfo)
+    app -> profileService: updatePrompts(userId, prompts)
+    app -> profileService: updatePhotos(userId, photos)
+    app -> profileService: updateInterests(userId, interests)
+    app -> profileService: validateBeforeDiscoverable(userId)
+    app -> visitor: Profile complete -> Discover feed
+end
+@enduml

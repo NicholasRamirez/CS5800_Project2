@@ -1,0 +1,37 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title Merge Dating App Sequence Diagram - Discover -> Like -> Match -> First Message
+
+actor "User" as user
+actor "Other User" as user2
+participant "DiscoveryService" as discoveryService
+participant "MatchingService" as matchingService
+participant "NotificationService" as notificationService
+participant "MessageService" as messagingService
+
+loop Browse candidates
+    App -> discoveryService: getNextCandidate(userId)
+    discoveryService --> App: CandidateProfile(candidateId)
+    App -> App: Show candidate card
+
+    alt Pass
+        App -> discoveryService: recordPass(userId, candidateId)
+    else Like
+        App -> messagingService: recordLike(likerId=userId, likedId=candidateId)
+
+        alt isMutualLike = yes
+            App -> messagingService: createMatch(userId, candidateId)
+            matchingService --> App: matchId
+            App -> matchingService: openChat(matchId)
+            matchingService --> App: threadId
+            App -> notificationService: notifyNewMatch(userId, matchId)
+            App -> notificationService: notifyNewMatch(candidateId, matchId)
+            App -> messagingService: sendMessage(threadId, userId, "Hello!")
+            App -> notificationService: notifyMessage(candidateId, threadId)
+        else not mutual
+            App -> App: Continue browsing
+        end
+    end
+end
+@enduml

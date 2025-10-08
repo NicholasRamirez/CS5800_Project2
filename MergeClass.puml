@@ -1,0 +1,182 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+title Merge Dating App Class Diagram
+
+class Visitor {
++provideCredentials(): void
++verifyToken(): void
+}
+
+class AuthenticationServices {
++collectCredentials(email: String, password: String): void
++sendVerificationToken(email: String): void
++validateCredentials(email: String, password: String): boolean
++createUser(email: String, passwordHash: String): User
++startSession(userId: UUID): Session
+}
+
+class VerificationToken {
++token: String
++userId: UUID
++createdAt: DateTime
++expiresAt: DateTime
++used: boolean
++validate(): boolean
++expire(): void
+}
+
+class User {
++userId: UUID
++email: String
++status: String
++receiveNotification(message: String): void
+}
+
+class Session {
++sessionId: UUID
++createdAt: DateTime
++expiresAt: DateTime
++validate(): boolean
+}
+
+class ProfileService {
++createProfileInformation(userId: UUID, profileInfo: ProfileInformation): void
++updateProfileInformation(userId: UUID, profileInfo: ProfileInformation): void
++updateInterests(userId: UUID, interests: Interests): void
++updatePrompts(userId: UUID, prompts: Prompts): void
++updatePhotos(userId: UUID, photos: Photos): void
++validateProfile(profileInfo: ProfileInformation): ValidationResult
++validateBeforeDiscoverable(userId: UUID): boolean
+}
+
+class ValidationResult {
++ok: boolean
++errors: Map<String, String>
+}
+
+class ProfileInformation {
++name: String
++birthday: Date
++gender: String
++genderInterest: String
++pronouns: String
++relationshipIntent: String
++height: int
++city: String
++update(...): void
+}
+
+class Prompts {
++items: List<String>
++add(text: String): void
++update(index: int, text: String): void
+}
+
+class Photos {
++urls: List<String>
++add(url: String): void
++remove(url: String): void
+}
+
+class Interests {
++tags: Set<String>
++add(tag: String): void
++remove(tag: String): void
+}
+
+class DiscoveryService {
++getNextCandidate(userId: UUID): CandidateProfile
++recordPass(userId: UUID, candidateId: UUID): void
+}
+
+class CandidateProfile {
++candidateId: UUID
++summary: String
+}
+
+class MatchingService {
++recordLike(likerId: UUID, likedId: UUID): void
++isMutualLike(a: UUID, b: UUID): boolean
++createMatch(a: UUID, b: UUID): Match
++openChat(matchId: UUID): ChatThread
++triggerNotification(matchId: UUID): void
+}
+
+class Match {
++matchId: UUID
++createdAt: DateTime
++active: boolean
++unmatch(byUserId: UUID): void
+}
+
+class ChatThread {
++threadId: UUID
++createdAt: DateTime
++archived: boolean
++addMessage(message: Message): void
+}
+
+class Message {
++messageId: UUID
++senderId: UUID
++sentAt: DateTime
++content: String
+}
+
+class MessagingService {
++sendMessage(threadId: UUID, senderId: UUID, content: String): Message
+}
+
+class NotificationService {
++notifyNewMatch(userId: UUID, matchId: UUID): void
++notifyMessage(userId: UUID, threadId: UUID): void
+}
+
+' Relationships
+
+Visitor ..> AuthenticationServices: uses
+Visitor ..> VerificationToken: verifies
+
+AuthenticationServices ..> VerificationToken
+AuthenticationServices ..> User: create
+AuthenticationServices ..> Session: start
+
+User "1" o-- "0..*" VerificationToken: issued
+User "1" *-- "0..1" ProfileInformation
+User "1" o-- "0..1" Session: sessions
+User "2" -- "1" Match: participants
+
+ProfileInformation "1" *-- "0..1" Prompts
+ProfileInformation "1" *-- "0..1" Photos
+ProfileInformation "1" *-- "0..1" Interests
+
+ProfileService ..> User
+ProfileService ..> Session
+ProfileService ..> ProfileInformation
+ProfileService ..> Prompts
+ProfileService ..> Photos
+ProfileService ..> Interests
+ProfileService ..> ValidationResult
+
+DiscoveryService ..> User
+DiscoveryService ..> ProfileService
+DiscoveryService --> CandidateProfile: returns
+
+MatchingService ..> User
+MatchingService ..> CandidateProfile
+MatchingService --> Match
+MatchingService --> ChatThread
+MatchingService ..> NotificationService
+
+Match "1" o-- "1" ChatThread: opens
+ChatThread "1" *-- "0..*" Message: contains
+Message "*" --> "1" User: sender
+MessagingService ..> ChatThread
+MessagingService ..> Message
+MessagingService ..> NotificationService
+
+NotificationService ..> User
+NotificationService ..> Match
+NotificationService ..> ChatThread
+@enduml
